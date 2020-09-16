@@ -17,7 +17,8 @@ public abstract class SyncConnection<E extends NetClient<?>> extends NetConnecti
 		_readThread = new Thread(() ->
 		{	
 			while(connected) try
-			{	read();
+			{	
+				read();
 			}
 			catch (Exception e)
 			{	

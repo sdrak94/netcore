@@ -1,11 +1,11 @@
 package test.sdrak.netcore.tcp;
 
 import com.sdrak.netcore.io.client.NetClient;
-import com.sdrak.netcore.tcp.TcpConnection;
+import com.sdrak.netcore.tcp.TcpLink;
 
-public class TClient extends NetClient<TcpConnection<TClient>>
+public class TClient2 extends NetClient<TcpLink<TClient2>>
 {
-	public TClient(TcpConnection<TClient> con)
+	public TClient2(TcpLink<TClient2> con)
 	{
 		super(con);
 	}

@@ -6,15 +6,20 @@ import java.net.DatagramSocket;
 
 import com.sdrak.netcore.io.NetworkHandler;
 import com.sdrak.netcore.io.client.NetClient;
-import com.sdrak.netcore.io.connection.AsyncConnection;
+import com.sdrak.netcore.io.connection.SyncLink;
 
-public class UdpChannel<E extends NetClient<?>> extends AsyncConnection<E>
+public class UdpLink<E extends NetClient<?>> extends SyncLink<E>
 {
 	private final DatagramSocket _udpSock;
 	
-	public UdpChannel(NetworkHandler<E> netHandler, DatagramSocket udpSock)
+	public UdpLink(final NetworkHandler<E> netHandler, final int port)  throws IOException
 	{
-		super(netHandler, null);
+		this(netHandler, new DatagramSocket(port));
+	}
+	
+	public UdpLink(final NetworkHandler<E> netHandler, final DatagramSocket udpSock)
+	{
+		super(netHandler, udpSock.getInetAddress());
 		_udpSock = udpSock;
 	}
 
@@ -32,5 +37,11 @@ public class UdpChannel<E extends NetClient<?>> extends AsyncConnection<E>
 	{
 		final DatagramPacket udpPacket = new DatagramPacket(data, begin, end);
 		_udpSock.send(udpPacket);
+	}
+
+	@Override
+	public void write() throws IOException
+	{
+		
 	}
 }

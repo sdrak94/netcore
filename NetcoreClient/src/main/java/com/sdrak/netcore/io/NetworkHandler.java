@@ -1,15 +1,19 @@
 package com.sdrak.netcore.io;
 
 import java.util.HashMap;
+import java.util.function.Supplier;
 
 import com.sdrak.netcore.Console;
 import com.sdrak.netcore.io.client.ClientState;
 import com.sdrak.netcore.io.client.NetClient;
 import com.sdrak.netcore.util.Util;
 
+import gnu.trove.map.hash.TIntObjectHashMap;
+
 public class NetworkHandler<E extends NetClient<?>>
 {
-	private HashMap<ClientState, HashMap<Byte, Class<? extends ReadablePacket<E>>>> classOpcodes = new HashMap<>();
+	private HashMap<ClientState, TIntObjectHashMap<Supplier<? extends ReadablePacket<E>>>> classOpcodes = new HashMap<>();
+	
 	
 	/**
 	 * register associates a specific packet class to an IState and an opcode, then the server will search for the
@@ -20,22 +24,22 @@ public class NetworkHandler<E extends NetClient<?>>
 	 * @param rpacketClass the class that is initialized upon the combination is fulfilled.
 	 */
 	
-	public final void register(final ClientState clientState, int opcode, Class<? extends ReadablePacket<E>> rpacketClass)
+	public final void register(final ClientState clientState, int opcode, Supplier<? extends ReadablePacket<E>> rpacketClass)
 	{
-		final HashMap<Byte, Class<? extends ReadablePacket<E>>> stateMap = getStateMap(clientState);
-		stateMap.put(new Byte((byte)opcode), rpacketClass);
+		final var stateMap = getStateMap(clientState);
+		stateMap.put(opcode, rpacketClass);
 	}
 	
-	public final void register(int opcode, Class<? extends ReadablePacket<E>> rpacketClass)
+	public final void register(int opcode, Supplier<? extends ReadablePacket<E>> rpacketClass)
 	{
 		register(ClientState.ONLINE, opcode, rpacketClass);
 	}
 	
-	private final HashMap<Byte, Class<? extends ReadablePacket<E>>> getStateMap(final ClientState state)
+	private final TIntObjectHashMap<Supplier<? extends ReadablePacket<E>>> getStateMap(final ClientState state)
 	{
-		HashMap<Byte, Class<? extends ReadablePacket<E>>> stateMap = classOpcodes.get(state);
+		var stateMap = classOpcodes.get(state);
 		if (stateMap == null)
-		{	stateMap = new HashMap<>();
+		{	stateMap = new TIntObjectHashMap<>();
 			classOpcodes.put(state, stateMap);
 		}
 		return stateMap;
@@ -51,10 +55,10 @@ public class NetworkHandler<E extends NetClient<?>>
 	 */
 	public void decodePacket(E client, byte[] data)
 	{
-		final byte opcode = data[0];
+		final int opcode = Util.readInt(data);
 		final ReadablePacket<E> readPacket = getPacket(client, opcode);
 		if (readPacket == null)
-			Console.write("Unknown packet " + Util.hexValue(opcode) + " for ClientState: " + client.getState());
+			Console.write("Client: " + client +  " Unknown packet " + Util.hexValue(opcode) + " for ClientState: " + client.getState());
 		else
 			readPacket.init(client, data);
 	}
@@ -63,12 +67,13 @@ public class NetworkHandler<E extends NetClient<?>>
 	 * @param opcode The first byte of the packet represents the id that corresponds to each packet class
 	 * @return a new instance of ReadPacket or null if the packet is invalid
 	 */
-	private ReadablePacket<E> getPacket(E client, byte opcode)
-	{	final HashMap<Byte, Class<? extends ReadablePacket<E>>> stateMap = classOpcodes.get(client.getState());
+	private <R extends ReadablePacket<E>> ReadablePacket<E> getPacket(E client, int opcode)
+	{	final var stateMap = classOpcodes.get(client.getState());
 		if (stateMap == null)
 			return null;
 		try
-		{	return stateMap.get(new Byte(opcode)).newInstance();
+		{	final var packetClass = stateMap.get(opcode);
+			return packetClass.get();
 		}
 		catch (Exception e)
 		{	return null;

@@ -5,24 +5,24 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.function.Function;
 
 import com.sdrak.netcore.Console;
 import com.sdrak.netcore.io.client.NetClient;
 import com.sdrak.netcore.server.NetServer;
-import com.sdrak.netcore.udp.UdpChannel;
+import com.sdrak.netcore.tcp.TcpLink;
+import com.sdrak.netcore.udp.UdpLink;
 
-public class UdpServer<E extends NetClient<UdpChannel<E>>> extends NetServer<E>
+public class UdpServer<E extends NetClient<UdpLink<E>>> extends NetServer<E, UdpLink<E>>
 {
-	private final HashMap<String, HashMap<Integer, UdpChannel<E>>> _knownClients = new HashMap<>();
+	private final HashMap<String, HashMap<Integer, UdpLink<E>>> _knownClients = new HashMap<>();
 	
-	private final Class<E> _clientClass;
 	private final DatagramSocket _udpSock;
 	
-	public UdpServer(Collection<E> aliveClients, Class<E> clientClass, int port) throws IOException
+	public UdpServer(Collection<E> aliveClients, final Function<UdpLink<E>, E> clientFactory, int port) throws IOException
 	{
-		super(aliveClients, null);
+		super(aliveClients, clientFactory);
 		Console.write("Starting the server");
-		_clientClass = clientClass;
 		_udpSock = new DatagramSocket(port);
 		Console.write("Server is loaded");
 	}
@@ -35,7 +35,7 @@ public class UdpServer<E extends NetClient<UdpChannel<E>>> extends NetServer<E>
 			final DatagramPacket udpPacket = new DatagramPacket(new byte[512], 512);
 			_udpSock.receive(udpPacket);
 			final byte[] buffer = udpPacket.getData();
-			final UdpChannel<E> udpCon = getConnection(udpPacket);
+			final UdpLink<E> udpCon = getConnection(udpPacket);
 			//Console.write("Connection established! IP: " + sock.getInetAddress().toString());
 			//Console.write("Waiting for a new client to connect!");
 			return null;//tcpClient;
@@ -46,21 +46,21 @@ public class UdpServer<E extends NetClient<UdpChannel<E>>> extends NetServer<E>
 		}
 	}
 	
-	private UdpChannel<E> getConnection(DatagramPacket udpPacket) throws IOException
+	private UdpLink<E> getConnection(DatagramPacket udpPacket) throws IOException
 	{
-		final HashMap<Integer, UdpChannel<E>> udpAddMap = _knownClients.get(udpPacket.getAddress().getHostAddress());
+		final HashMap<Integer, UdpLink<E>> udpAddMap = _knownClients.get(udpPacket.getAddress().getHostAddress());
 		if (udpAddMap == null)
 		{
-			final HashMap<Integer, UdpChannel<E>> udpPortCon= new HashMap<>();
-			final UdpChannel<E> udpCon = new UdpChannel<>(_netHandler, new DatagramSocket(udpPacket.getSocketAddress()));
+			final HashMap<Integer, UdpLink<E>> udpPortCon= new HashMap<>();
+			final UdpLink<E> udpCon = new UdpLink<>(_netHandler, new DatagramSocket(udpPacket.getSocketAddress()));
 			udpPortCon.put(udpPacket.getPort(), udpCon);
 			_knownClients.put(udpPacket.getAddress().getHostAddress(), udpPortCon);
 			return udpCon;
 		}
-		UdpChannel<E> udpCon = udpAddMap.get(udpPacket.getPort());
+		UdpLink<E> udpCon = udpAddMap.get(udpPacket.getPort());
 		if (udpCon == null)
 		{
-			udpCon = new UdpChannel<E>(_netHandler, new DatagramSocket(udpPacket.getSocketAddress()));
+			udpCon = new UdpLink<E>(_netHandler, new DatagramSocket(udpPacket.getSocketAddress()));
 			udpAddMap.put(udpPacket.getPort(), udpCon);
 		}
 		return udpCon;

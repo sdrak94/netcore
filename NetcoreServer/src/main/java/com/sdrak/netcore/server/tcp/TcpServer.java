@@ -4,18 +4,19 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Collection;
+import java.util.function.Function;
 
 import com.sdrak.netcore.io.client.NetClient;
 import com.sdrak.netcore.server.NetServer;
 import com.sdrak.netcore.tcp.TcpConnection;
 
-public class TcpServer<E extends NetClient<TcpConnection<E>>> extends NetServer<E>
+public class TcpServer<E extends NetClient<TcpConnection<E>>> extends NetServer<E, TcpConnection<E>>
 {
 	private final ServerSocket _serverSocket;
 	
-	public TcpServer(Collection<E> aliveClients, Class<E> clientClass, int port) throws IOException
+	public TcpServer(Collection<E> aliveClients, Function<TcpConnection<E>, E> clientFactory, int port) throws IOException
 	{
-		super(aliveClients, clientClass);
+		super(aliveClients, clientFactory);
 		_serverSocket = new ServerSocket(port);
 	}
 	

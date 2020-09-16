@@ -13,10 +13,15 @@ public abstract class ReadablePacket<E extends NetClient<?>> implements IPacket
 	private ByteBuffer _byteBuffer;
 	private E _client;
 	
+	public ReadablePacket()
+	{
+		
+	}
+	
 	public boolean init(E client, byte[] byteBuffer)
 	{	_byteBuffer = ByteBuffer.wrap(byteBuffer).order(ByteOrder.LITTLE_ENDIAN);
 		_client = client;
-		readC();
+		readD(); //opcode
 		try
 		{	readImpl();
 			runImpl();

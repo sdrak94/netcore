@@ -5,7 +5,9 @@ import static com.sdrak.netcore.Config.DEFAULT_CIPHER;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.util.concurrent.Executors;
+import java.util.function.Supplier;
 
+import com.sdrak.netcore.Console;
 import com.sdrak.netcore.interfaces.IAddressable;
 import com.sdrak.netcore.io.client.NetClient;
 import com.sdrak.netcore.io.encryption.Cipher;
@@ -36,11 +38,12 @@ public abstract class NetConnection<E extends NetClient<?>> implements IAddressa
 	public final void read() throws IOException
 	{
 		final byte[] sizeArray = read(0, 4);
-		final int size = Util.digitsToInt(sizeArray);
+		final int size = Util.readInt(sizeArray);
 		final byte[] buffer = read(0, size);
 		if (_cipher != null)
 			_cipher.dec(buffer);
-		_netHandler.decodePacket(_client, buffer);
+		if (_netHandler != null)
+			_netHandler.decodePacket(_client, buffer);
 	}
 	
 	public final void write(byte[] b) throws IOException
@@ -116,9 +119,10 @@ public abstract class NetConnection<E extends NetClient<?>> implements IAddressa
 		return _netHandler;
 	}
 	
-	public void registerPacket(byte opcode, Class<? extends ReadablePacket<E>> rpacketClass)
+	public void registerPacket(byte opcode, Supplier<? extends ReadablePacket<E>> rpacketClass)
 	{
-		_netHandler.register(opcode, rpacketClass);
+		if (_netHandler != null)
+			_netHandler.register(opcode, rpacketClass);
 	}
 	
 	@Override

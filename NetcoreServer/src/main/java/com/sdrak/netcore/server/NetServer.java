@@ -1,6 +1,8 @@
 package com.sdrak.netcore.server;
 
 import java.util.Collection;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
 import com.sdrak.netcore.Console;
 import com.sdrak.netcore.io.NetConnection;
@@ -9,27 +11,28 @@ import com.sdrak.netcore.io.ReadablePacket;
 import com.sdrak.netcore.io.client.ClientState;
 import com.sdrak.netcore.io.client.NetClient;
 
-public abstract class NetServer<E extends NetClient<?>> implements Runnable
+public abstract class NetServer<E extends NetClient<C>, C extends NetConnection<E>> implements Runnable
 {
 	private boolean running = true;
 	
-	private final Class<E> _clientClass;
 	private final Collection<E> _connectedNow;
 	
-	public NetServer(Collection<E> connectedNow, final Class<E> clientClass)
+	private final Function<C, E> _clientFactory;
+	
+	public NetServer(Collection<E> connectedNow, final Function<C, E> clientFactory)
 	{
 		_connectedNow = connectedNow;
-		_clientClass = clientClass;
+		_clientFactory = clientFactory;
 	}
 	
 	protected final NetworkHandler<E> _netHandler = new NetworkHandler<>();
 	
-	public void register(int opcode, Class<? extends ReadablePacket<E>> rpacketClass)
+	public void register(int opcode, Supplier<? extends ReadablePacket<E>> rpacketClass)
 	{
 		_netHandler.register(ClientState.ONLINE, opcode, rpacketClass);
 	}
 	
-	public void register(final ClientState state, int opcode, Class<? extends ReadablePacket<E>> rpacketClass)
+	public void register(final ClientState state, int opcode, Supplier<? extends ReadablePacket<E>> rpacketClass)
 	{
 		_netHandler.register(state, opcode, rpacketClass);
 	}
@@ -42,8 +45,6 @@ public abstract class NetServer<E extends NetClient<?>> implements Runnable
 		while(running)
 		{
 			awaitAccept();
-			final E client = accept();
-			register(client);
 		}
 	}
 	
@@ -51,19 +52,20 @@ public abstract class NetServer<E extends NetClient<?>> implements Runnable
 	{
 		Console.write("Waiting for a connection.");
 		final E client = accept();
-		register(client);
+//		if (client != null)
+			register(client);
 	}
 	
-	protected final E forgeClient(final NetConnection<E> connection) throws Exception
+	protected final <T extends NetConnection<E>> E forgeClient(final C connection) throws Exception
 	{
-		final E client = _clientClass.getConstructor(connection.getClass()).newInstance(connection);
+		final E client = _clientFactory.apply(connection);
 		connection.setClient(client);
 		return client;
 	}
 	
 	protected final void register(E client)
 	{
-		Console.write("Client Connected: " + client.toString() + " ! IP: " + client.getIP());
+		Console.write("Client Connected: " + client.toString() + " ! IP: " + client.getIP() + " " + _connectedNow.size());
 		_connectedNow.add(client);
 	}
 	

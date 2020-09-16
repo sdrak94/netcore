@@ -9,60 +9,137 @@ import java.nio.channels.SocketChannel;
 import java.util.ArrayDeque;
 import java.util.Collection;
 import java.util.Deque;
+import java.util.Iterator;
 import java.util.Set;
+import java.util.function.Function;
 
 import com.sdrak.netcore.io.client.NetClient;
 import com.sdrak.netcore.server.NetServer;
 import com.sdrak.netcore.tcp.TcpLink;
 
-public class TcpChannel<E extends NetClient<TcpLink<E>>> extends NetServer<E>
+public class TcpChannel<E extends NetClient<TcpLink<E>>> extends NetServer<E, TcpLink<E>>
 {
 	private final Deque<E> _acceptQueue = new ArrayDeque<>();
 	
-	private final Selector _selector;
+	private final Selector _acceptSelector;
+	private final Selector _ioSelector;
 	private final ServerSocketChannel _serverSocket;
 	
-	public TcpChannel(Collection<E> aliveClients, Class<E> clientClass, int port) throws IOException
+	public TcpChannel(Collection<E> aliveClients, final Function<TcpLink<E>, E> clientFactory, int port) throws IOException
 	{
-		super(aliveClients, clientClass);
-		_selector = Selector.open();
+		super(aliveClients, clientFactory);
+		_acceptSelector = Selector.open();
+		_ioSelector = Selector.open();
+		
 		_serverSocket = ServerSocketChannel.open();
+
+		_serverSocket.configureBlocking(false);
 		
 		_serverSocket.bind(new InetSocketAddress(port));
-		_serverSocket.configureBlocking(false);
-		_serverSocket.register(_selector, SelectionKey.OP_ACCEPT);
+		_serverSocket.register(_acceptSelector, SelectionKey.OP_ACCEPT);
+		
+		final Thread ioThread = new Thread(this::startIO);
+		ioThread.start();
 	}
 	
 	@Override
 	protected final E accept()
 	{
-		if (_acceptQueue.isEmpty())
-			fillQueue();
-		
-		return _acceptQueue.poll();
-
+		try
+		{
+			_acceptSelector.select();
+			final SocketChannel socketChannel = _serverSocket.accept();
+			final TcpLink<E> tcpLink = new TcpLink<>(_netHandler, socketChannel);
+			final E client = forgeClient(tcpLink);
+			
+			socketChannel.register(_ioSelector, SelectionKey.OP_READ | SelectionKey.OP_WRITE, tcpLink);
+			
+			_acceptQueue.offer(client);
+			return client;
+		}
+		catch (Exception e)
+		{
+			e.printStackTrace();
+			return null;
+		}
 	}
 	
-	private void fillQueue()
+	private void startIO()
+	{
+		while (true)
+			performIO();
+	}
+	
+	private void performIO()
 	{
 		try
-		{	
-			_selector.select();
-			final Set<SelectionKey> selectedKeys = _selector.selectedKeys();
+		{
+			_ioSelector.selectNow();
+			final Set<SelectionKey> selectedKeys = _ioSelector.selectedKeys();
 			
-			for (final SelectionKey selectedKey : selectedKeys)
+			Iterator<SelectionKey> iter = selectedKeys.iterator();
+			
+			while (iter.hasNext())
 			{
-				if (selectedKey.isAcceptable())
-				{
-					final SocketChannel socketChannel = _serverSocket.accept();
-					final TcpLink<E> tcpCon = new TcpLink<>(_netHandler, socketChannel);
-					final E client = forgeClient(tcpCon);
-					_acceptQueue.offer(client);
-				}
+				final SelectionKey selectedKey = iter.next();
+				@SuppressWarnings("unchecked")
+				final TcpLink<E> tcpLink = (TcpLink<E>) selectedKey.attachment();
+
+				if (tcpLink == null) // no client attached ?
+					continue;
+				
+				if (selectedKey.isReadable())
+					tcpLink.read();
+				else if (selectedKey.isWritable())
+					tcpLink.write();
+				
+				iter.remove();
 			}
 		}
 		catch (Exception e)
-		{	e.printStackTrace();
+		{
+			e.printStackTrace();
 		}
 	}
+	
+//	@Override
+//	protected final E accept()
+//	{
+//		final E client = _acceptQueue.poll();
+//		
+//		if (client != null)
+//			return client;
+//		
+//		sleep(500);
+//		fillQueue();
+//		
+//		return accept();
+//
+//	}
+//	
+//	private void fillQueue()
+//	{
+//		try
+//		{	
+//			_acceptSelector.select();
+//			final Set<SelectionKey> selectedKeys = _acceptSelector.selectedKeys();
+//			
+//			Iterator<SelectionKey> iter = selectedKeys.iterator();
+//			
+//			while (iter.hasNext())
+//			{
+//				final SelectionKey selectedKey = iter.next();
+//				if (selectedKey.isAcceptable())
+//				{
+//					final SocketChannel socketChannel = _serverSocket.accept();
+//					final TcpLink<E> tcpCon = new TcpLink<>(_netHandler, socketChannel);
+//					final E client = forgeClient(tcpCon);
+//					_acceptQueue.offer(client);
+//				}
+//			}
+//		}
+//		catch (Exception e)
+//		{	e.printStackTrace();
+//		}
+//	}
 }

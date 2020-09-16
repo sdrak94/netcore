@@ -6,9 +6,9 @@ import java.nio.channels.SocketChannel;
 
 import com.sdrak.netcore.io.NetworkHandler;
 import com.sdrak.netcore.io.client.NetClient;
-import com.sdrak.netcore.io.connection.AsyncConnection;
+import com.sdrak.netcore.io.connection.SyncLink;
 
-public class TcpLink<E extends NetClient<TcpLink<E>>> extends AsyncConnection<E>
+public class TcpLink<E extends NetClient<?>> extends SyncLink<E>
 {
 	private final SocketChannel _sock;
 	
@@ -34,8 +34,13 @@ public class TcpLink<E extends NetClient<TcpLink<E>>> extends AsyncConnection<E>
 	}
 
 	@Override
-	protected void write(byte[] data, int begin, int end) throws IOException
+	public void write() throws IOException
 	{
-		_sock.write(ByteBuffer.wrap(data));
+		final ByteBuffer queueBuffer = _readQueue.poll();
+		if (queueBuffer != null)
+		{
+			_sock.write(queueBuffer);
+			write();
+		}
 	}
 }
