@@ -1,6 +1,7 @@
 package com.sdrak.netcore.tcp;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.net.Socket;
 
 import com.sdrak.netcore.io.NetworkHandler;
@@ -9,30 +10,48 @@ import com.sdrak.netcore.io.connection.SyncConnection;
 
 public class TcpConnection<E extends NetClient<TcpConnection<E>>> extends SyncConnection<E>
 {
-	private final Socket _sock;
+	private final Socket _socket;
 	
-	public TcpConnection(NetworkHandler<E> netHandler, Socket sock)
+	public TcpConnection(NetworkHandler<E> netHandler, InetSocketAddress socketAddress)
 	{
-		super(netHandler, sock.getInetAddress());
-		_sock = sock;
+		super(netHandler, socketAddress);
+		
+		Socket socket = null;
+		try
+		{
+			socket = new Socket(socketAddress.getAddress(), socketAddress.getPort());
+		}
+		catch (Exception e)
+		{
+			e.printStackTrace();
+		}
+		
+		_socket = socket;
+		connect();
+	}
+	
+	public TcpConnection(NetworkHandler<E> netHandler, Socket socket) throws IOException
+	{
+		super(netHandler, (InetSocketAddress) socket.getRemoteSocketAddress());
+		_socket = socket;
 	}
 	
 	public Socket getSocket()
 	{
-		return _sock;
+		return _socket;
 	}
 
 	@Override
 	protected byte[] read(int begin, int end) throws IOException 
 	{
 		byte[] buffer = new byte[end - begin];
-		_sock.getInputStream().read(buffer, begin, end);
+		_socket.getInputStream().read(buffer, begin, end);
 		return buffer;
 	}
 
 	@Override
 	protected void write(byte[] data, int begin, int end) throws IOException
 	{
-		_sock.getOutputStream().write(data, begin, end);
+		_socket.getOutputStream().write(data, begin, end);
 	}
 }

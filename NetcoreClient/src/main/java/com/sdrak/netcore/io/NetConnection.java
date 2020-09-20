@@ -4,10 +4,11 @@ import static com.sdrak.netcore.Config.DEFAULT_CIPHER;
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
 import java.util.concurrent.Executors;
 import java.util.function.Supplier;
 
-import com.sdrak.netcore.Console;
 import com.sdrak.netcore.interfaces.IAddressable;
 import com.sdrak.netcore.io.client.NetClient;
 import com.sdrak.netcore.io.encryption.Cipher;
@@ -17,23 +18,23 @@ public abstract class NetConnection<E extends NetClient<?>> implements IAddressa
 {
 	protected boolean connected = true;
 	protected final NetworkHandler<E> _netHandler;
-	protected final InetAddress _inetAddress;
+	protected final InetSocketAddress _socketAddress;
 	protected Cipher _cipher;
 	protected E _client;
 	
+	private final ByteBuffer _headerBuffer;
 	
-	public NetConnection(final NetworkHandler<E> netHandler, final InetAddress inetAddress)
+	public NetConnection(final NetworkHandler<E> netHandler, final InetSocketAddress socketAddress)
 	{
 		_netHandler = netHandler;
-		_inetAddress = inetAddress;
+		_socketAddress = socketAddress;
 		_cipher = DEFAULT_CIPHER;
+		
+		_headerBuffer = ByteBuffer.allocate(getHeaderSize());
 	}
 	
 	protected abstract byte[] read(int begin, int end) throws IOException;
 	protected abstract void write(byte[] buffer, int begin, int end) throws IOException;
-	
-//	protected abstract void read() throws IOException;
-//	protected abstract void write(byte[] b) throws IOException;
 	
 	public final void read() throws IOException
 	{
@@ -50,10 +51,15 @@ public abstract class NetConnection<E extends NetClient<?>> implements IAddressa
 	{
 		if (_cipher != null)
 			_cipher.enc(b);
-		final int size = b.length;
-		final byte[] buffer = Util.toDigitsArray(size);
-		final byte[] data = Util.concat(buffer, b);
+		final byte[] data = Util.concat(writeHeaders(b).array(), b);
 		write(data, 0, data.length);
+		_headerBuffer.flip();
+	}
+	
+	protected ByteBuffer writeHeaders(byte[] data)
+	{
+		_headerBuffer.putInt(data.length);
+		return _headerBuffer;
 	}
 	
 	public void setEncryption(Cipher cipher)
@@ -125,15 +131,20 @@ public abstract class NetConnection<E extends NetClient<?>> implements IAddressa
 			_netHandler.register(opcode, rpacketClass);
 	}
 	
+	public int getHeaderSize()
+	{
+		return Integer.BYTES;
+	}
+	
 	@Override
 	public InetAddress getInetAddress()
 	{
-		return _inetAddress;
+		return _socketAddress.getAddress();
 	}
 	
 	@Override
 	public String getIP()
 	{
-		return _inetAddress.toString();
+		return getInetAddress().toString();
 	}
 }

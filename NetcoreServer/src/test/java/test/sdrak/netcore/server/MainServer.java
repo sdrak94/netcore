@@ -1,11 +1,10 @@
 package test.sdrak.netcore.server;
 
-import java.net.InetAddress;
-import java.net.Socket;
 import java.util.ArrayList;
 import java.util.HashSet;
 
 import com.sdrak.netcore.factory.ClientFactory;
+import com.sdrak.netcore.factory.ConnectionFactory;
 import com.sdrak.netcore.io.NetworkHandler;
 import com.sdrak.netcore.io.ReadablePacket;
 import com.sdrak.netcore.io.WritablePacket;
@@ -34,7 +33,7 @@ public class MainServer
 			@Override
 			public void writeImpl()
 			{
-				writeD(0x6050403);
+				writeD(0x3040506);
 				writeD(_id);
 			}
 		}
@@ -51,7 +50,7 @@ public class MainServer
 			@Override
 			public void writeImpl()
 			{
-				writeD(0x6050403);
+				writeD(0x3040506);
 				writeD(_id);
 			}
 		}
@@ -71,7 +70,7 @@ public class MainServer
 			{
 				try
 				{
-//					System.out.println(getClient() + " -> " + val + " -> Server");
+					System.out.println(getClient() + " -> " + val + " -> Server");
 					if (val < 10)
 					getClient().getConnection().sendPacket(new DummyWrite2(val));
 				}
@@ -97,9 +96,9 @@ public class MainServer
 			{
 				try
 				{
-//					System.out.println("Server -> " + val + " -> " + getClient());
+					System.out.println("Server -> " + val + " -> " + getClient());
 					if (val < 10)
-					getClient().getConnection().sendPacket(new DummyWrite(val));
+					getClient().getConnection().sendPacket(new DummyWrite(val+1));
 				}
 				catch (Exception e)
 				{
@@ -115,34 +114,34 @@ public class MainServer
 		final Thread thread = new Thread(channel);
 		thread.start();
 		
-		var add = InetAddress.getByName("localhost");
 
 		final ArrayList<TClient> clients = new ArrayList<>(1500);
 		
-		final ClientFactory<TClient, TcpConnection<TClient>> asd = new ClientFactory<>();
+		final ClientFactory<TClient, TcpConnection<TClient>> clientFactory = new ClientFactory<>(TClient::new);
+		final ConnectionFactory<TcpConnection<TClient>, TClient> connectionFactory = new ConnectionFactory<>(TcpConnection::new);
 		
-		final var handler = createHandler();
-		handler.register(ClientState.NO_AUTHD, 0x3040506, DummyPacket::new);
+		connectionFactory.register(ClientState.NO_AUTHD, 0x3040506, DummyPacket::new);
 		
-		for (int i = 0; i < 100; i++)
+		Thread.sleep(100);
+		
+		for (int i = 0; i < 10; i++)
 		{
-			final TClient client = asd.create(TClient::new, new TcpConnection<>(handler, new Socket(add, 4000)));
+			final TClient client = clientFactory.create(connectionFactory.create("localhost", 4000));
 			
 			clients.add(client);
 		}
 		
-		final long t0 = System.currentTimeMillis();
 		
+		final long t0 = System.currentTimeMillis();
 		
 		for (var client : clients)
 		{
-			for (int i = 0; i < 10; i++)
+			for (int i = 0; i < 2; i++)
 				client.getConnection().sendPacket(new DummyWrite(i));
 		}
 		
 		final long t1 = System.currentTimeMillis();
 		
-		System.out.print("end " + (t1 - t0) + " ms");
 	}
 	
 	private static NetworkHandler<TClient> createHandler()

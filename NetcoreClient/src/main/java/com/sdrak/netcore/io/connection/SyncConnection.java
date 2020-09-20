@@ -1,7 +1,7 @@
 package com.sdrak.netcore.io.connection;
 
 import java.io.IOException;
-import java.net.InetAddress;
+import java.net.InetSocketAddress;
 
 import com.sdrak.netcore.io.NetConnection;
 import com.sdrak.netcore.io.NetworkHandler;
@@ -11,9 +11,9 @@ public abstract class SyncConnection<E extends NetClient<?>> extends NetConnecti
 {
 	protected final Thread _readThread;
 	
-	public SyncConnection(NetworkHandler<E> netHandler, final InetAddress inetAddress)
+	public SyncConnection(NetworkHandler<E> netHandler, final InetSocketAddress socketAddress)
 	{
-		super(netHandler, inetAddress);
+		super(netHandler, socketAddress);
 		_readThread = new Thread(() ->
 		{	
 			while(connected) try
@@ -22,9 +22,14 @@ public abstract class SyncConnection<E extends NetClient<?>> extends NetConnecti
 			}
 			catch (Exception e)
 			{	
+				e.printStackTrace();
 				_client.onForceExit();
 			}
 		});
+	}
+	
+	protected void connect()
+	{
 		_readThread.start();
 	}
 	

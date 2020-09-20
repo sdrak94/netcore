@@ -4,16 +4,16 @@ import java.util.HashMap;
 import java.util.function.Supplier;
 
 import com.sdrak.netcore.Console;
+import com.sdrak.netcore.interfaces.IHandler;
 import com.sdrak.netcore.io.client.ClientState;
 import com.sdrak.netcore.io.client.NetClient;
 import com.sdrak.netcore.util.Util;
 
 import gnu.trove.map.hash.TIntObjectHashMap;
 
-public class NetworkHandler<E extends NetClient<?>>
+public class NetworkHandler<E extends NetClient<?>> implements IHandler<E>
 {
 	private HashMap<ClientState, TIntObjectHashMap<Supplier<? extends ReadablePacket<E>>>> classOpcodes = new HashMap<>();
-	
 	
 	/**
 	 * register associates a specific packet class to an IState and an opcode, then the server will search for the
@@ -24,15 +24,11 @@ public class NetworkHandler<E extends NetClient<?>>
 	 * @param rpacketClass the class that is initialized upon the combination is fulfilled.
 	 */
 	
-	public final void register(final ClientState clientState, int opcode, Supplier<? extends ReadablePacket<E>> rpacketClass)
+	@Override
+	public final void register(final ClientState clientState, int opcode, Supplier<? extends ReadablePacket<E>> packetFactory)
 	{
 		final var stateMap = getStateMap(clientState);
-		stateMap.put(opcode, rpacketClass);
-	}
-	
-	public final void register(int opcode, Supplier<? extends ReadablePacket<E>> rpacketClass)
-	{
-		register(ClientState.ONLINE, opcode, rpacketClass);
+		stateMap.put(opcode, packetFactory);
 	}
 	
 	private final TIntObjectHashMap<Supplier<? extends ReadablePacket<E>>> getStateMap(final ClientState state)
@@ -55,7 +51,7 @@ public class NetworkHandler<E extends NetClient<?>>
 	 */
 	public void decodePacket(E client, byte[] data)
 	{
-		final int opcode = Util.readInt(data);
+		final int opcode = Util.intRead(data);
 		final ReadablePacket<E> readPacket = getPacket(client, opcode);
 		if (readPacket == null)
 			Console.write("Client: " + client +  " Unknown packet " + Util.hexValue(opcode) + " for ClientState: " + client.getState());
@@ -71,12 +67,9 @@ public class NetworkHandler<E extends NetClient<?>>
 	{	final var stateMap = classOpcodes.get(client.getState());
 		if (stateMap == null)
 			return null;
-		try
-		{	final var packetClass = stateMap.get(opcode);
-			return packetClass.get();
-		}
-		catch (Exception e)
-		{	return null;
-		}
+		final var packetClass = stateMap.get(opcode);
+		if (packetClass == null)
+			return null;
+		return packetClass.get();
 	}
 }

@@ -90,7 +90,7 @@ public class TcpChannel<E extends NetClient<TcpLink<E>>> extends NetServer<E, Tc
 				
 				if (selectedKey.isReadable())
 					tcpLink.read();
-				else if (selectedKey.isWritable())
+				if (selectedKey.isWritable())
 					tcpLink.write();
 				
 				iter.remove();

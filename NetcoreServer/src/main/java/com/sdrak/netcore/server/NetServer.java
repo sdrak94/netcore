@@ -5,33 +5,31 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 import com.sdrak.netcore.Console;
+import com.sdrak.netcore.factory.ClientFactory;
+import com.sdrak.netcore.interfaces.IHandler;
 import com.sdrak.netcore.io.NetConnection;
 import com.sdrak.netcore.io.NetworkHandler;
 import com.sdrak.netcore.io.ReadablePacket;
 import com.sdrak.netcore.io.client.ClientState;
 import com.sdrak.netcore.io.client.NetClient;
 
-public abstract class NetServer<E extends NetClient<C>, C extends NetConnection<E>> implements Runnable
+public abstract class NetServer<E extends NetClient<C>, C extends NetConnection<E>> implements Runnable, IHandler<E>
 {
 	private boolean running = true;
 	
-	private final Collection<E> _connectedNow;
+	private final ClientFactory<E, C> _clientFactory;
 	
-	private final Function<C, E> _clientFactory;
+	private final Collection<E> _connectedNow;
 	
 	public NetServer(Collection<E> connectedNow, final Function<C, E> clientFactory)
 	{
 		_connectedNow = connectedNow;
-		_clientFactory = clientFactory;
+		_clientFactory = new ClientFactory<>(clientFactory);
 	}
 	
 	protected final NetworkHandler<E> _netHandler = new NetworkHandler<>();
 	
-	public void register(int opcode, Supplier<? extends ReadablePacket<E>> rpacketClass)
-	{
-		_netHandler.register(ClientState.ONLINE, opcode, rpacketClass);
-	}
-	
+	@Override
 	public void register(final ClientState state, int opcode, Supplier<? extends ReadablePacket<E>> rpacketClass)
 	{
 		_netHandler.register(state, opcode, rpacketClass);
@@ -56,10 +54,9 @@ public abstract class NetServer<E extends NetClient<C>, C extends NetConnection<
 			register(client);
 	}
 	
-	protected final <T extends NetConnection<E>> E forgeClient(final C connection) throws Exception
+	protected final <T extends NetConnection<E>> E forgeClient(final C connection)
 	{
-		final E client = _clientFactory.apply(connection);
-		connection.setClient(client);
+		final E client = _clientFactory.create(connection);
 		return client;
 	}
 	

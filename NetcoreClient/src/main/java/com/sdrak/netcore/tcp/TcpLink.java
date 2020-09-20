@@ -1,6 +1,7 @@
 package com.sdrak.netcore.tcp;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 
@@ -10,36 +11,35 @@ import com.sdrak.netcore.io.connection.SyncLink;
 
 public class TcpLink<E extends NetClient<?>> extends SyncLink<E>
 {
-	private final SocketChannel _sock;
+	private final SocketChannel _socketChannel;
 	
-	public TcpLink(NetworkHandler<E> netHandler, SocketChannel sock) throws IOException
+	public TcpLink(NetworkHandler<E> netHandler, final SocketChannel socketChannel) throws IOException
 	{
-		super(netHandler, sock.socket().getInetAddress());
-		_sock = sock;
-		_sock.configureBlocking(false);
+		super(netHandler, (InetSocketAddress) socketChannel.getRemoteAddress());
+		_socketChannel = socketChannel;
+		_socketChannel.configureBlocking(false);
 	}
 	
 	public SocketChannel getSocket()
 	{
-		return _sock;
+		return _socketChannel;
 	}
 
 	@Override
 	protected byte[] read(int begin, int end) throws IOException 
 	{
-//		byte[] buffer = new byte[end - begin];
 		final ByteBuffer buffer = ByteBuffer.allocate(end - begin);
-		_sock.read(buffer);
+		_socketChannel.read(buffer);
 		return buffer.array();
 	}
 
 	@Override
 	public void write() throws IOException
 	{
-		final ByteBuffer queueBuffer = _readQueue.poll();
+		final ByteBuffer queueBuffer = _writeQueue.poll();
 		if (queueBuffer != null)
 		{
-			_sock.write(queueBuffer);
+			_socketChannel.write(queueBuffer);
 			write();
 		}
 	}
