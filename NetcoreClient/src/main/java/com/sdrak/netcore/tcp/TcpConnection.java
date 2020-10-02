@@ -34,6 +34,7 @@ public class TcpConnection<E extends NetClient<TcpConnection<E>>> extends SyncCo
 	{
 		super(netHandler, (InetSocketAddress) socket.getRemoteSocketAddress());
 		_socket = socket;
+		connect();
 	}
 	
 	public Socket getSocket()

@@ -39,8 +39,7 @@ public class UdpChannel<E extends NetClient<UdpLink<E>>> extends NetServer<E, Ud
 		
 		_serverSocket.bind(new InetSocketAddress(port));
 		_serverSocket.register(_ioSelector, SelectionKey.OP_READ | SelectionKey.OP_WRITE);
-//		final Thread ioThread = new Thread(this::startIO);
-//		ioThread.start();
+		
 	}
 	
 	@Override
@@ -61,7 +60,7 @@ public class UdpChannel<E extends NetClient<UdpLink<E>>> extends NetServer<E, Ud
 	{
 		try
 		{	
-			_ioSelector.selectNow();
+			_ioSelector.select();
 			final Set<SelectionKey> selectedKeys = _ioSelector.selectedKeys();
 			
 			final Iterator<SelectionKey> iter = selectedKeys.iterator();
@@ -69,13 +68,13 @@ public class UdpChannel<E extends NetClient<UdpLink<E>>> extends NetServer<E, Ud
 			while (iter.hasNext())
 			{
 				final SelectionKey selectedKey = iter.next();
-				if (selectedKey.isReadable())
+				
+				DatagramChannel datagramChannel = (DatagramChannel) selectedKey.channel();
+				@SuppressWarnings("unchecked")
+				UdpLink<E> udpLink = (UdpLink<E>) selectedKey.attachment();
+				
+				if (selectedKey.isReadable()) //read mechanism
 				{
-					DatagramChannel datagramChannel = (DatagramChannel) selectedKey.channel();
-					
-					@SuppressWarnings("unchecked")
-					UdpLink<E> udpLink = (UdpLink<E>) selectedKey.attachment();
-					
 					ByteBuffer readBuffer = ByteBuffer.allocate(100);
 					final byte[] b = readBuffer.array();
 					
@@ -88,14 +87,17 @@ public class UdpChannel<E extends NetClient<UdpLink<E>>> extends NetServer<E, Ud
 					final long sessionId = readBuffer.getLong();
 					
 					if (udpLink == null)
-						udpLink = fetchLink(sessionId, sockAddr);
+						udpLink = fetchLink(sessionId, selectedKey, sockAddr);
 					
 					selectedKey.interestOps(SelectionKey.OP_WRITE);
 					
 					System.out.println(String.format("Server: Recieved %d bytes from session %08X", dataLen, sessionId));
 				}
-				else if (selectedKey.isWritable())
+				else if (selectedKey.isWritable()) //send mechanism
 				{
+					System.out.println(datagramChannel);
+					if (udpLink != null)
+						udpLink.write();
 					selectedKey.interestOps(SelectionKey.OP_READ);
 				}
 			}
@@ -105,7 +107,7 @@ public class UdpChannel<E extends NetClient<UdpLink<E>>> extends NetServer<E, Ud
 		}
 	}
 	
-	public UdpLink<E> fetchLink(final long sessionId, final InetSocketAddress sockAddr) throws IOException
+	public UdpLink<E> fetchLink(final long sessionId, final SelectionKey selectedKey, final InetSocketAddress sockAddr) throws IOException
 	{
 		UdpLink<E> udpLink = _sessionsMap.get(sessionId);
 		if (udpLink == null)
@@ -114,6 +116,7 @@ public class UdpChannel<E extends NetClient<UdpLink<E>>> extends NetServer<E, Ud
 			_sessionsMap.put(sessionId, udpLink);
 			final E client = forgeClient(udpLink);
 			_acceptQueue.add(client);
+			selectedKey.attach(udpLink);
 			return udpLink;
 		}
 		

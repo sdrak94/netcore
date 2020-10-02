@@ -77,13 +77,13 @@ public abstract class NetConnection<E extends NetClient<?>> implements IAddressa
 		return _client;
 	}
 	
-	public boolean sendPacket(WritablePacket<E> writePacket)
+	public boolean sendPacket(SendablePacket<E> writePacket)
 	{	
 		if (!connected)
 			return false;
 		writePacket.setClient(_client);
 		try
-		{	writePacket.writeImpl();
+		{	writePacket.write();
 			write(writePacket.getData());
 			writePacket.reset(); //reset for future re-use
 			return true;
@@ -98,7 +98,7 @@ public abstract class NetConnection<E extends NetClient<?>> implements IAddressa
 	 * Asynchronous, won't cause network blocking. Safe to use via MainThreads
 	 * @param writePacket
 	 */
-	public void sendPacketEx(final WritablePacket<E> writePacket)
+	public void sendPacketEx(final SendablePacket<E> writePacket)
 	{
 		Executors.newSingleThreadExecutor().submit(new Runnable()
 		{

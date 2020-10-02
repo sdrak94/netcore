@@ -5,19 +5,18 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
-import java.util.UUID;
 
+import com.sdrak.netcore.PacketDictionary;
 import com.sdrak.netcore.io.NetworkHandler;
 import com.sdrak.netcore.io.client.NetClient;
 import com.sdrak.netcore.io.connection.SyncLink;
+import com.sdrak.netcore.udp.readable.UGetSession;
 
 public class UdpLink<E extends NetClient<?>> extends SyncLink<E>
 {
 	private final DatagramSocket _udpSocket;
 
-	private final long _localSessionId;
-	
-//	private long _remoteSessionId;
+	private long _sessionId;
 	
 	public UdpLink(final NetworkHandler<E> netHandler, final InetSocketAddress socketAddress)
 	{
@@ -26,7 +25,6 @@ public class UdpLink<E extends NetClient<?>> extends SyncLink<E>
 		DatagramSocket udpSocket = null;
 		try
 		{
-
 			udpSocket = new DatagramSocket();
 			udpSocket.connect(socketAddress);
 		}
@@ -34,24 +32,23 @@ public class UdpLink<E extends NetClient<?>> extends SyncLink<E>
 		{
 			e.printStackTrace();
 		}
-		
+			
 		_udpSocket = udpSocket;
 		
-		final UUID sessionUUID = UUID.randomUUID();
-		_localSessionId = sessionUUID.getMostSignificantBits()  & Long.MAX_VALUE;
-//		System.out.println(String.format("Created UUID: %08X", _sessionId));
-//		_udpSock.bind(new InetSocketAddress(bindAddress, 1115));
+		_netHandler.register(PacketDictionary.U__SET_SSESSION, UGetSession::new);
 	}
 	
-	public long getSessionId0()
+	public void setSessionId(final long sessionId)
 	{
-		return _localSessionId;
+		if (_sessionId == 0)
+			_sessionId = sessionId;
 	}
 	
-	public long getSessionId1()
+	public long getSessionId()
 	{
-		return _localSessionId;
+		return _sessionId;
 	}
+	
 
 	@Override
 	protected byte[] read(int begin, int end) throws IOException 
@@ -72,14 +69,17 @@ public class UdpLink<E extends NetClient<?>> extends SyncLink<E>
 	@Override
 	public void write() throws IOException
 	{
-		
+		for (final ByteBuffer buffer : _writeQueue)
+		{
+			
+		}
 	}
 	
 	@Override
 	protected ByteBuffer writeHeaders(byte[] data)
 	{
 		final ByteBuffer headerBuffer = super.writeHeaders(data);
-		headerBuffer.putLong(_localSessionId);
+		headerBuffer.putLong(_sessionId);
 		return headerBuffer;
 	}
 	

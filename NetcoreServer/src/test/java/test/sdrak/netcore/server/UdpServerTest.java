@@ -5,10 +5,11 @@ import java.util.ArrayList;
 
 import com.sdrak.netcore.factory.ClientFactory;
 import com.sdrak.netcore.factory.ConnectionFactory;
-import com.sdrak.netcore.io.WritablePacket;
+import com.sdrak.netcore.io.SendablePacket;
 import com.sdrak.netcore.io.client.NetClient;
 import com.sdrak.netcore.server.udp.UdpChannel;
 import com.sdrak.netcore.udp.UdpLink;
+import com.sdrak.netcore.udp.io.sendable.UReqSession;
 
 public class UdpServerTest
 {
@@ -23,7 +24,7 @@ public class UdpServerTest
 		@Override
 		public String toString()
 		{
-			return String.format("sessionId: %016X", getConnection().getSessionId0());
+			return String.format("sessionId: %016X", getConnection().getSessionId());
 		}
 		
 	}
@@ -43,22 +44,27 @@ public class UdpServerTest
 		final InetSocketAddress socketAddress = new InetSocketAddress("localhost", 1115);
 
 		final UClient uclient0 = uclientFactory.create(ulinkFactory.create(socketAddress));
-		final UClient uclient1 = uclientFactory.create(ulinkFactory.create(socketAddress));
-
-		uclient1.getConnection().sendPacket(new UdpPacket());
-		uclient1.getConnection().sendPacket(new UdpPacket());
-		uclient1.getConnection().sendPacket(new UdpPacket());
-		uclient0.getConnection().sendPacket(new UdpPacket());
-		uclient0.getConnection().sendPacket(new UdpPacket());
-		uclient0.getConnection().sendPacket(new UdpPacket());
+		uclient0.getConnection().sendPacket(new UReqSession<>());
+		
+		final long t0 = System.currentTimeMillis();
+//		for (int i = 0; i < 200; i++)
+//			uclient0.getConnection().sendPacket(new UdpPacket());
+		final long t1 = System.currentTimeMillis();
+		
+		System.out.println(t1 - t0);
 	}
 	
-	private static class UdpPacket extends WritablePacket<UClient>
+	
+	private static class UdpPacket extends SendablePacket<UClient>
 	{
+		public UdpPacket()
+		{
+			super(0x01);
+		}
+
 		@Override
 		public void writeImpl()
 		{
-			writeD(0x01);
 			writeD(0x02);
 		}
 	}
