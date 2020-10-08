@@ -7,7 +7,7 @@ import java.util.function.Supplier;
 import com.sdrak.netcore.interfaces.IHandler;
 import com.sdrak.netcore.io.NetConnection;
 import com.sdrak.netcore.io.NetworkHandler;
-import com.sdrak.netcore.io.ReadablePacket;
+import com.sdrak.netcore.io.RecievablePacket;
 import com.sdrak.netcore.io.client.ClientState;
 import com.sdrak.netcore.io.client.NetClient;
 
@@ -33,7 +33,7 @@ public class ConnectionFactory<E extends NetConnection<C>, C extends NetClient<E
   	}
 	
 	@Override
-	public void register(final ClientState clientState, final int opcode, final Supplier<? extends ReadablePacket<C>> packetFactory)
+	public void register(final ClientState clientState, final int opcode, final Supplier<? extends RecievablePacket<C>> packetFactory)
 	{
 		_networkHandler.register(clientState, opcode, packetFactory);
 	}

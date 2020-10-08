@@ -13,8 +13,10 @@ import java.util.Iterator;
 import java.util.Set;
 import java.util.function.Function;
 
+import com.sdrak.netcore.NetDictionary;
 import com.sdrak.netcore.io.client.NetClient;
 import com.sdrak.netcore.server.NetServer;
+import com.sdrak.netcore.server.udp.io.recv.URecvReqSession;
 import com.sdrak.netcore.udp.UdpLink;
 
 import gnu.trove.map.hash.TLongObjectHashMap;
@@ -34,13 +36,11 @@ public class UdpChannel<E extends NetClient<UdpLink<E>>> extends NetServer<E, Ud
 		_ioSelector = Selector.open();
 		
 		_serverSocket = DatagramChannel.open();
-
 		_serverSocket.configureBlocking(false);
-		
 		_serverSocket.bind(new InetSocketAddress(port));
-		_serverSocket.register(_ioSelector, SelectionKey.OP_READ | SelectionKey.OP_WRITE);
-//		final Thread ioThread = new Thread(this::startIO);
-//		ioThread.start();
+		_serverSocket.register(_ioSelector, SelectionKey.OP_READ);
+		
+		register(NetDictionary.U_RECV__REQ_SESSION, URecvReqSession::new);
 	}
 	
 	@Override
@@ -61,7 +61,7 @@ public class UdpChannel<E extends NetClient<UdpLink<E>>> extends NetServer<E, Ud
 	{
 		try
 		{	
-			_ioSelector.selectNow();
+			_ioSelector.select();
 			final Set<SelectionKey> selectedKeys = _ioSelector.selectedKeys();
 			
 			final Iterator<SelectionKey> iter = selectedKeys.iterator();
@@ -69,14 +69,16 @@ public class UdpChannel<E extends NetClient<UdpLink<E>>> extends NetServer<E, Ud
 			while (iter.hasNext())
 			{
 				final SelectionKey selectedKey = iter.next();
+				
+				final DatagramChannel datagramChannel = (DatagramChannel) selectedKey.channel();
+				@SuppressWarnings("unchecked")
+				UdpLink<E> udpLink = (UdpLink<E>) selectedKey.attachment();
+				
 				if (selectedKey.isReadable())
 				{
-					DatagramChannel datagramChannel = (DatagramChannel) selectedKey.channel();
+
 					
-					@SuppressWarnings("unchecked")
-					UdpLink<E> udpLink = (UdpLink<E>) selectedKey.attachment();
-					
-					ByteBuffer readBuffer = ByteBuffer.allocate(100);
+					ByteBuffer readBuffer = ByteBuffer.allocate(12);
 					final byte[] b = readBuffer.array();
 					
 					final InetSocketAddress sockAddr = (InetSocketAddress) datagramChannel.receive(readBuffer);
@@ -93,9 +95,13 @@ public class UdpChannel<E extends NetClient<UdpLink<E>>> extends NetServer<E, Ud
 					selectedKey.interestOps(SelectionKey.OP_WRITE);
 					
 					System.out.println(String.format("Server: Recieved %d bytes from session %08X", dataLen, sessionId));
+					
+					udpLink.read();
 				}
 				else if (selectedKey.isWritable())
 				{
+					if (udpLink == null)
+						return; //?
 					selectedKey.interestOps(SelectionKey.OP_READ);
 				}
 			}

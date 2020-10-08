@@ -20,9 +20,9 @@ public abstract class SyncLink<E extends NetClient<?>> extends NetConnection<E>
 	}
 	
 	@Override
-	protected void write(byte[] buffer, int begin, int end) throws IOException
+	protected void write(final ByteBuffer byteBuffer, int begin, int end) throws IOException
 	{
-		_writeQueue.offer(ByteBuffer.wrap(buffer));
+		_writeQueue.offer(byteBuffer);
 	}
 
 	public abstract void write() throws IOException;

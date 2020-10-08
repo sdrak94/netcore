@@ -3,6 +3,7 @@ package com.sdrak.netcore.tcp;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.nio.ByteBuffer;
 
 import com.sdrak.netcore.io.NetworkHandler;
 import com.sdrak.netcore.io.client.NetClient;
@@ -15,19 +16,7 @@ public class TcpConnection<E extends NetClient<TcpConnection<E>>> extends SyncCo
 	public TcpConnection(NetworkHandler<E> netHandler, InetSocketAddress socketAddress)
 	{
 		super(netHandler, socketAddress);
-		
-		Socket socket = null;
-		try
-		{
-			socket = new Socket(socketAddress.getAddress(), socketAddress.getPort());
-		}
-		catch (Exception e)
-		{
-			e.printStackTrace();
-		}
-		
-		_socket = socket;
-		connect();
+		_socket = createSocket(socketAddress);
 	}
 	
 	public TcpConnection(NetworkHandler<E> netHandler, Socket socket) throws IOException
@@ -42,16 +31,30 @@ public class TcpConnection<E extends NetClient<TcpConnection<E>>> extends SyncCo
 	}
 
 	@Override
-	protected byte[] read(int begin, int end) throws IOException 
+	protected ByteBuffer read(int begin, int end) throws IOException 
 	{
 		byte[] buffer = new byte[end - begin];
 		_socket.getInputStream().read(buffer, begin, end);
-		return buffer;
+		final ByteBuffer byteBuffer = ByteBuffer.wrap(buffer);
+		return byteBuffer;
 	}
 
 	@Override
-	protected void write(byte[] data, int begin, int end) throws IOException
+	protected void write(final ByteBuffer byteBuffer, int begin, int end) throws IOException
 	{
-		_socket.getOutputStream().write(data, begin, end);
+		_socket.getOutputStream().write(byteBuffer.array(), begin, end);
+	}
+	
+	private static Socket createSocket(final InetSocketAddress socketAddress)
+	{
+		try
+		{
+			return new Socket(socketAddress.getAddress(), socketAddress.getPort());
+		}
+		catch (Exception e)
+		{
+			e.printStackTrace();
+			throw new RuntimeException(socketAddress + " connecton failed!");
+		}
 	}
 }

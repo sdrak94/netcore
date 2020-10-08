@@ -6,8 +6,8 @@ import java.util.HashSet;
 import com.sdrak.netcore.factory.ClientFactory;
 import com.sdrak.netcore.factory.ConnectionFactory;
 import com.sdrak.netcore.io.NetworkHandler;
-import com.sdrak.netcore.io.ReadablePacket;
-import com.sdrak.netcore.io.WritablePacket;
+import com.sdrak.netcore.io.RecievablePacket;
+import com.sdrak.netcore.io.SendablePacket;
 import com.sdrak.netcore.io.client.ClientState;
 import com.sdrak.netcore.server.tcp.TcpChannel;
 import com.sdrak.netcore.tcp.TcpConnection;
@@ -21,41 +21,41 @@ public class MainServer
 	{
 		final HashSet<TClient2> aliveClients = new HashSet<>();
 		
-		class DummyWrite extends WritablePacket<TClient>
+		class DummyWrite extends SendablePacket<TClient>
 		{
 			int _id;
 			
 			public DummyWrite(int id)
 			{
+				super(0x3040506);
 				_id = id;
 			}
 			
 			@Override
 			public void writeImpl()
 			{
-				writeD(0x3040506);
 				writeD(_id);
 			}
 		}
 		
-		class DummyWrite2 extends WritablePacket<TClient2>
+		class DummyWrite2 extends SendablePacket<TClient2>
 		{
 			int _id;
 			
 			public DummyWrite2(int id)
 			{
+				super(0x3040506);
 				_id = id;
 			}
 			
 			@Override
 			public void writeImpl()
 			{
-				writeD(0x3040506);
 				writeD(_id);
 			}
 		}
 		
-		class DummyPacket2 extends ReadablePacket<TClient2>
+		class DummyPacket2 extends RecievablePacket<TClient2>
 		{
 			int val;
 			
@@ -81,7 +81,7 @@ public class MainServer
 			}
 		}
 		
-		class DummyPacket extends ReadablePacket<TClient>
+		class DummyPacket extends RecievablePacket<TClient>
 		{
 			int val;
 			
