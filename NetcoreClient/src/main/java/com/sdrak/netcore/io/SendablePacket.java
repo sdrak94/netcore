@@ -83,12 +83,14 @@ public abstract class SendablePacket<E extends NetClient<?>> implements IPacket
 		}
 	}
 
-	public byte[] getData()
+	public ByteBuffer getDataBuffer()
 	{
-		byte[] data = new byte[packetSize];
-		byteBuffer.clear();
-		byteBuffer.get(data);
-		return data;
+		return byteBuffer;
+	}
+	
+	public int getDataSize()
+	{
+		return packetSize;
 	}
 
 	/**

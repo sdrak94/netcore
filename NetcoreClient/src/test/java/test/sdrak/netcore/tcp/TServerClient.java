@@ -3,9 +3,9 @@ package test.sdrak.netcore.tcp;
 import com.sdrak.netcore.io.client.NetClient;
 import com.sdrak.netcore.tcp.TcpLink;
 
-public class TClient2 extends NetClient<TcpLink<TClient2>>
+public class TServerClient extends NetClient<TcpLink<TServerClient>>
 {
-	public TClient2(TcpLink<TClient2> con)
+	public TServerClient(TcpLink<TServerClient> con)
 	{
 		super(con);
 	}
@@ -15,6 +15,6 @@ public class TClient2 extends NetClient<TcpLink<TClient2>>
 	
 	public String toString()
 	{
-		return String.format("%08d", cc);
+		return String.format("[Server]%08d", cc);
 	}
 }

@@ -31,10 +31,6 @@ public abstract class SyncConnection<E extends NetClient<?>> extends NetConnecti
 			disconnect();
 			e.printStackTrace();
 		}
-		finally
-		{
-			connected = false;
-		}
 	}
 	
 	@Override

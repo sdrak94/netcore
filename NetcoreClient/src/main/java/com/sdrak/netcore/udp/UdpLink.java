@@ -87,9 +87,9 @@ public class UdpLink<E extends NetClient<? extends UdpLink<E>>> extends SyncLink
 	}
 	
 	@Override
-	protected void writeHeaders(final ByteBuffer dataBuffer, byte[] data)
+	protected void writeHeader(final ByteBuffer dataBuffer, final ByteBuffer packetBuffer, final int packetSize)
 	{
-		super.writeHeaders(dataBuffer, data);
+		super.writeHeader(dataBuffer, packetBuffer, packetSize);
 		dataBuffer.putLong(_sessionId);
 	}
 	

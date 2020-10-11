@@ -89,9 +89,9 @@ public class TcpChannel<E extends NetClient<TcpLink<E>>> extends NetServer<E, Tc
 					continue;
 				
 				if (selectedKey.isReadable())
-					tcpLink.read();
+					read(selectedKey, tcpLink);
 				if (selectedKey.isWritable())
-					tcpLink.write();
+					write(selectedKey, tcpLink);
 				
 				iter.remove();
 			}
@@ -100,6 +100,18 @@ public class TcpChannel<E extends NetClient<TcpLink<E>>> extends NetServer<E, Tc
 		{
 			e.printStackTrace();
 		}
+	}
+	
+	private void read(final SelectionKey selectionKey, final TcpLink<E> tcpLink) throws IOException
+	{
+		tcpLink.read();
+		selectionKey.interestOps(SelectionKey.OP_WRITE);
+	}
+	
+	private void write(final SelectionKey selectionKey, final TcpLink<E> tcpLink) throws IOException
+	{
+		tcpLink.write();
+		selectionKey.interestOps(SelectionKey.OP_READ);
 	}
 	
 //	@Override

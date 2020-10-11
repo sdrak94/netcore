@@ -12,7 +12,6 @@ import java.util.function.Supplier;
 import com.sdrak.netcore.interfaces.IAddressable;
 import com.sdrak.netcore.io.client.NetClient;
 import com.sdrak.netcore.io.encryption.Cipher;
-import com.sdrak.netcore.util.Util;
 
 public abstract class NetConnection<E extends NetClient<?>> implements IAddressable
 {
@@ -62,28 +61,37 @@ public abstract class NetConnection<E extends NetClient<?>> implements IAddressa
 		sizeBuffer.rewind();
 		final int size = sizeBuffer.getInt();
 		final ByteBuffer buffer = read(0, size);
+		buffer.flip();
 		if (_cipher != null)
 			_cipher.dec(buffer.array());
 		if (_netHandler != null)
 			_netHandler.decodePacket(_client, buffer);
 	}
 
-	public final void write(byte[] b) throws IOException
+	public final void write(final ByteBuffer packetBuffer, final int packetSize) throws IOException
 	{
 		if (_cipher != null)
-			_cipher.enc(b);
-//		final byte[] data = Util.concat(writeHeaders(b).array(), b);
-		final ByteBuffer dataBuffer = ByteBuffer.allocate(getHeaderSize() + b.length);
+			_cipher.enc(packetBuffer.array());
+		
+		final int writeSize = getHeaderSize() + packetSize;
+		
+		final ByteBuffer dataBuffer = ByteBuffer.allocate(writeSize);
 
-		writeHeaders(dataBuffer, b);
-		dataBuffer.put(b);
-		dataBuffer.rewind();
-		write(dataBuffer, 0, dataBuffer.remaining()); //XXX
+		writeHeader(dataBuffer, packetBuffer, packetSize);
+		writeBuffer(dataBuffer, packetBuffer);
+		write(dataBuffer, 0, writeSize);
+	}
+	
+	private void writeBuffer(final ByteBuffer destination, final ByteBuffer dataBuffer)
+	{
+		dataBuffer.flip();
+		destination.put(dataBuffer);
+		destination.flip();
 	}
 
-	protected void writeHeaders(final ByteBuffer dataBuffer, final byte[] data)
+	protected void writeHeader(final ByteBuffer dataBuffer, final ByteBuffer packetBuffer, final int packetSize)
 	{
-		dataBuffer.putInt(data.length);
+		dataBuffer.putInt(packetSize);
 	}
 
 	public void setEncryption(Cipher cipher)
@@ -109,7 +117,7 @@ public abstract class NetConnection<E extends NetClient<?>> implements IAddressa
 		try
 		{
 			writePacket.write();
-			write(writePacket.getData());
+			write(writePacket.getDataBuffer(), writePacket.getDataSize());
 			writePacket.reset(); // reset for future re-use
 			return true;
 		}

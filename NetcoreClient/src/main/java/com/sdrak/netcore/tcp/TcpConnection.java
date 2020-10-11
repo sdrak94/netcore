@@ -2,8 +2,8 @@ package com.sdrak.netcore.tcp;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.net.Socket;
 import java.nio.ByteBuffer;
+import java.nio.channels.SocketChannel;
 
 import com.sdrak.netcore.io.NetworkHandler;
 import com.sdrak.netcore.io.client.NetClient;
@@ -11,7 +11,7 @@ import com.sdrak.netcore.io.connection.SyncConnection;
 
 public class TcpConnection<E extends NetClient<TcpConnection<E>>> extends SyncConnection<E>
 {
-	private final Socket _socket;
+	private final SocketChannel _socket;
 	
 	public TcpConnection(NetworkHandler<E> netHandler, InetSocketAddress socketAddress)
 	{
@@ -19,13 +19,13 @@ public class TcpConnection<E extends NetClient<TcpConnection<E>>> extends SyncCo
 		_socket = createSocket(socketAddress);
 	}
 	
-	public TcpConnection(NetworkHandler<E> netHandler, Socket socket) throws IOException
+	public TcpConnection(NetworkHandler<E> netHandler, SocketChannel socket) throws IOException
 	{
-		super(netHandler, (InetSocketAddress) socket.getRemoteSocketAddress());
+		super(netHandler, (InetSocketAddress) socket.getRemoteAddress());
 		_socket = socket;
 	}
 	
-	public Socket getSocket()
+	public SocketChannel getSocket()
 	{
 		return _socket;
 	}
@@ -33,23 +33,25 @@ public class TcpConnection<E extends NetClient<TcpConnection<E>>> extends SyncCo
 	@Override
 	protected ByteBuffer read(int begin, int end) throws IOException 
 	{
-		byte[] buffer = new byte[end - begin];
-		_socket.getInputStream().read(buffer, begin, end);
-		final ByteBuffer byteBuffer = ByteBuffer.wrap(buffer);
-		return byteBuffer;
+		final int packetSize = end - begin;
+		final ByteBuffer packetBuffer = ByteBuffer.allocate(packetSize);
+		_socket.read(packetBuffer);
+		return packetBuffer;
 	}
 
 	@Override
 	protected void write(final ByteBuffer byteBuffer, int begin, int end) throws IOException
 	{
-		_socket.getOutputStream().write(byteBuffer.array(), begin, end);
+		_socket.write(byteBuffer);
 	}
 	
-	private static Socket createSocket(final InetSocketAddress socketAddress)
+	private static SocketChannel createSocket(final InetSocketAddress socketAddress)
 	{
 		try
 		{
-			return new Socket(socketAddress.getAddress(), socketAddress.getPort());
+			final SocketChannel socketChannel = SocketChannel.open();
+			socketChannel.connect(socketAddress);
+			return socketChannel;
 		}
 		catch (Exception e)
 		{
