@@ -10,22 +10,22 @@ public class SnakeCipher extends Cipher
 	}
 	
 	@Override
-	public void enc(byte[] b) 
+	public void enc(byte[] dataBuffer) 
 	{
-		for (int i=0;i<b.length;i++)
+		for (int i=0;i<dataBuffer.length;i++)
 		{
 			byte key = _keys[i % _keys.length];
-			b[i] = (byte) (b[i] ^ key);
+			dataBuffer[i] = (byte) (dataBuffer[i] ^ key);
 		}
 	}
 
 	@Override
-	public void dec(byte[] b) 
+	public void dec(byte[] dataBuffer) 
 	{
-		for (int i=0;i<b.length;i++)
+		for (int i=0;i<dataBuffer.length;i++)
 		{
 			byte key = _keys[i % _keys.length];
-			b[i] = (byte) (b[i] ^ key);
+			dataBuffer[i] = (byte) (dataBuffer[i] ^ key);
 		}
 	}
 

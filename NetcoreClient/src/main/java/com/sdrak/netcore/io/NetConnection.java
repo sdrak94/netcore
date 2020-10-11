@@ -63,7 +63,7 @@ public abstract class NetConnection<E extends NetClient<?>> implements IAddressa
 		final ByteBuffer buffer = read(0, size);
 		buffer.flip();
 		if (_cipher != null)
-			_cipher.dec(buffer.array());
+			_cipher.dec(buffer);
 		if (_netHandler != null)
 			_netHandler.decodePacket(_client, buffer);
 	}
@@ -71,7 +71,7 @@ public abstract class NetConnection<E extends NetClient<?>> implements IAddressa
 	public final void write(final ByteBuffer packetBuffer, final int packetSize) throws IOException
 	{
 		if (_cipher != null)
-			_cipher.enc(packetBuffer.array());
+			_cipher.enc(packetBuffer);
 		
 		final int writeSize = getHeaderSize() + packetSize;
 		

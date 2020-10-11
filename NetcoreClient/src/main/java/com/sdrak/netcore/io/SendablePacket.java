@@ -1,8 +1,8 @@
 package com.sdrak.netcore.io;
 
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 
+import com.sdrak.netcore.factory.BufferFactory;
 import com.sdrak.netcore.io.client.NetClient;
 
 public abstract class SendablePacket<E extends NetClient<?>> implements IPacket
@@ -17,7 +17,7 @@ public abstract class SendablePacket<E extends NetClient<?>> implements IPacket
 	protected SendablePacket(final int opcode)
 	{
 		_opcode = opcode;
-		byteBuffer = ByteBuffer.allocate(malloc()).order(ByteOrder.BIG_ENDIAN);
+		byteBuffer = BufferFactory.getInstance().take(512);
 	}
 
 	public void write()
