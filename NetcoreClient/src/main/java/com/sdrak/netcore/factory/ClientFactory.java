@@ -24,6 +24,7 @@ public class ClientFactory<E extends NetClient<C>, C extends NetConnection<E>>
 	{
 		final E client = _clientFactory.apply(con);
 		con.setClient(client);
+		con.connect();
 		return client;
 	}
 	

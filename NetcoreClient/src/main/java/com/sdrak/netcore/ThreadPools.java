@@ -60,6 +60,11 @@ public class ThreadPools
 	{
 		return scheduleGeneral(task, delay, TimeUnit.MILLISECONDS);
 	}
+	
+	public ScheduledFuture<?> scheduleGeneral(Runnable task)
+	{
+		return scheduleGeneral(task, 0);
+	}
 
 	public ScheduledFuture<?> scheduleGeneralAtFixedRate(Runnable task, long initialDelay, long period, TimeUnit unit)
 	{

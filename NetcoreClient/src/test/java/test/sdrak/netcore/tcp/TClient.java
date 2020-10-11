@@ -15,6 +15,6 @@ public class TClient extends NetClient<TcpConnection<TClient>>
 	
 	public String toString()
 	{
-		return String.format("%08d", cc);
+		return String.format("[Client]%08d", cc);
 	}
 }

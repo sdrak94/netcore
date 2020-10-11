@@ -1,21 +1,20 @@
 package com.sdrak.netcore.udp;
 
 import java.io.IOException;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
-import java.util.UUID;
+import java.nio.channels.DatagramChannel;
 
 import com.sdrak.netcore.io.NetworkHandler;
 import com.sdrak.netcore.io.client.NetClient;
 import com.sdrak.netcore.io.connection.SyncLink;
+import com.sdrak.netcore.udp.io.send.USendReqSession;
 
-public class UdpLink<E extends NetClient<?>> extends SyncLink<E>
+public class UdpLink<E extends NetClient<? extends UdpLink<E>>> extends SyncLink<E>
 {
-	private final DatagramSocket _udpSocket;
+	private final DatagramChannel _udpChannel;
 
-	private final long _localSessionId;
+	private long _sessionId;
 	
 //	private long _remoteSessionId;
 	
@@ -23,50 +22,62 @@ public class UdpLink<E extends NetClient<?>> extends SyncLink<E>
 	{
 		super(netHandler, socketAddress);
 		
-		DatagramSocket udpSocket = null;
+		
+		_udpChannel = createDatagramChannel(socketAddress);
+		
+		sendPacket(new USendReqSession<E>());
+	}
+	
+	private DatagramChannel createDatagramChannel(final InetSocketAddress socketAddress)
+	{
 		try
 		{
-
-			udpSocket = new DatagramSocket();
-			udpSocket.connect(socketAddress);
+			final DatagramChannel udpChannel = DatagramChannel.open();
+			udpChannel.connect(socketAddress);
+			return udpChannel;
 		}
 		catch (Exception e)
 		{
 			e.printStackTrace();
+			return null;
 		}
-		
-		_udpSocket = udpSocket;
-		
-		final UUID sessionUUID = UUID.randomUUID();
-		_localSessionId = sessionUUID.getMostSignificantBits()  & Long.MAX_VALUE;
-//		System.out.println(String.format("Created UUID: %08X", _sessionId));
-//		_udpSock.bind(new InetSocketAddress(bindAddress, 1115));
 	}
 	
-	public long getSessionId0()
+	public void setSessionId(final long sessionId)
 	{
-		return _localSessionId;
+		if (sessionId != 0)
+			throw new RuntimeException("Connection " + this + " has sessionId already!");
+		_sessionId = sessionId;
 	}
 	
-	public long getSessionId1()
+	public long getSessionId()
 	{
-		return _localSessionId;
+		return _sessionId;
+	}
+	
+	@Override
+	public void connect()
+	{
+		super.connect();
+		sendPacket(new USendReqSession<E>());
 	}
 
 	@Override
-	protected byte[] read(int begin, int end) throws IOException 
+	protected ByteBuffer read(int begin, int end) throws IOException 
 	{
-		byte[] buffer = new byte[end - begin];
-		final DatagramPacket udpPacket = new DatagramPacket(buffer, begin, end);
-		_udpSocket.receive(udpPacket);
-		return buffer;
+//		byte[] buffer = new byte[end - begin];
+		final ByteBuffer dataBuffer = ByteBuffer.allocate(end - begin);
+		_udpChannel.receive(dataBuffer);
+//		_udpSocket.receive(udpPacket);
+		return dataBuffer;
 	}
 
 	@Override
-	protected void write(byte[] data, int begin, int end) throws IOException
+	protected void write(ByteBuffer dataBuffer, int begin, int end) throws IOException
 	{
-		final DatagramPacket udpPacket = new DatagramPacket(data, begin, end);
-		_udpSocket.send(udpPacket);
+//		final DatagramPacket udpPacket = new DatagramPacket(data, begin, end);
+//		_udpSocket.send(udpPacket);
+		_udpChannel.send(dataBuffer, _socketAddress);
 	}
 
 	@Override
@@ -76,11 +87,10 @@ public class UdpLink<E extends NetClient<?>> extends SyncLink<E>
 	}
 	
 	@Override
-	protected ByteBuffer writeHeaders(byte[] data)
+	protected void writeHeader(final ByteBuffer dataBuffer, final ByteBuffer packetBuffer, final int packetSize)
 	{
-		final ByteBuffer headerBuffer = super.writeHeaders(data);
-		headerBuffer.putLong(_localSessionId);
-		return headerBuffer;
+		super.writeHeader(dataBuffer, packetBuffer, packetSize);
+		dataBuffer.putLong(_sessionId);
 	}
 	
 	@Override

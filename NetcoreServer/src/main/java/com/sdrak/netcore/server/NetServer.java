@@ -9,7 +9,7 @@ import com.sdrak.netcore.factory.ClientFactory;
 import com.sdrak.netcore.interfaces.IHandler;
 import com.sdrak.netcore.io.NetConnection;
 import com.sdrak.netcore.io.NetworkHandler;
-import com.sdrak.netcore.io.ReadablePacket;
+import com.sdrak.netcore.io.RecievablePacket;
 import com.sdrak.netcore.io.client.ClientState;
 import com.sdrak.netcore.io.client.NetClient;
 
@@ -30,7 +30,7 @@ public abstract class NetServer<E extends NetClient<C>, C extends NetConnection<
 	protected final NetworkHandler<E> _netHandler = new NetworkHandler<>();
 	
 	@Override
-	public void register(final ClientState state, int opcode, Supplier<? extends ReadablePacket<E>> rpacketClass)
+	public void register(final ClientState state, int opcode, Supplier<? extends RecievablePacket<E>> rpacketClass)
 	{
 		_netHandler.register(state, opcode, rpacketClass);
 	}

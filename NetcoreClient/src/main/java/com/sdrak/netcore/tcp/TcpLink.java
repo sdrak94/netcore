@@ -26,11 +26,11 @@ public class TcpLink<E extends NetClient<?>> extends SyncLink<E>
 	}
 
 	@Override
-	protected byte[] read(int begin, int end) throws IOException 
+	protected ByteBuffer read(int begin, int end) throws IOException 
 	{
 		final ByteBuffer buffer = ByteBuffer.allocate(end - begin);
 		_socketChannel.read(buffer);
-		return buffer.array();
+		return buffer;
 	}
 
 	@Override

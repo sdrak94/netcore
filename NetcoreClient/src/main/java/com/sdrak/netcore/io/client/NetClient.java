@@ -37,9 +37,13 @@ public abstract class NetClient<E extends NetConnection<?>> implements IAddressa
 		_con.setEncryption(cipher);
 	}
 	
-	public void onForceExit()
+	public void disconnect()
 	{
-		_con.destroy();
+		_con.disconnect();
+	}
+	
+	public void onDisconnect()
+	{
 		setState(ClientState.OFFLINE);
 	}
 	

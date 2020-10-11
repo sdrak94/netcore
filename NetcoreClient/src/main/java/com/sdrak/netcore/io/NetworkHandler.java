@@ -1,5 +1,6 @@
 package com.sdrak.netcore.io;
 
+import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.function.Supplier;
 
@@ -13,7 +14,7 @@ import gnu.trove.map.hash.TIntObjectHashMap;
 
 public class NetworkHandler<E extends NetClient<?>> implements IHandler<E>
 {
-	private HashMap<ClientState, TIntObjectHashMap<Supplier<? extends ReadablePacket<E>>>> classOpcodes = new HashMap<>();
+	private HashMap<ClientState, TIntObjectHashMap<Supplier<? extends RecievablePacket<E>>>> classOpcodes = new HashMap<>();
 	
 	/**
 	 * register associates a specific packet class to an IState and an opcode, then the server will search for the
@@ -25,13 +26,13 @@ public class NetworkHandler<E extends NetClient<?>> implements IHandler<E>
 	 */
 	
 	@Override
-	public final void register(final ClientState clientState, int opcode, Supplier<? extends ReadablePacket<E>> packetFactory)
+	public final void register(final ClientState clientState, int opcode, Supplier<? extends RecievablePacket<E>> packetFactory)
 	{
 		final var stateMap = getStateMap(clientState);
 		stateMap.put(opcode, packetFactory);
 	}
 	
-	private final TIntObjectHashMap<Supplier<? extends ReadablePacket<E>>> getStateMap(final ClientState state)
+	private final TIntObjectHashMap<Supplier<? extends RecievablePacket<E>>> getStateMap(final ClientState state)
 	{
 		var stateMap = classOpcodes.get(state);
 		if (stateMap == null)
@@ -49,21 +50,22 @@ public class NetworkHandler<E extends NetClient<?>> implements IHandler<E>
 	 * @param client The actual client that transmitted this data
 	 * @param data A byte array containing all the information the client transmitted to the server
 	 */
-	public void decodePacket(E client, byte[] data)
+	public void decodePacket(E client, final ByteBuffer dataBuffer)
 	{
-		final int opcode = Util.intRead(data);
-		final ReadablePacket<E> readPacket = getPacket(client, opcode);
+		dataBuffer.rewind();
+		final int opcode = dataBuffer.getInt();
+		final RecievablePacket<E> readPacket = getPacket(client, opcode);
 		if (readPacket == null)
 			Console.write("Client: " + client +  " Unknown packet " + Util.hexValue(opcode) + " for ClientState: " + client.getState());
 		else
-			readPacket.init(client, data);
+			readPacket.init(client, dataBuffer);
 	}
 	
 	/**
 	 * @param opcode The first byte of the packet represents the id that corresponds to each packet class
 	 * @return a new instance of ReadPacket or null if the packet is invalid
 	 */
-	private <R extends ReadablePacket<E>> ReadablePacket<E> getPacket(E client, int opcode)
+	private <R extends RecievablePacket<E>> RecievablePacket<E> getPacket(E client, int opcode)
 	{	final var stateMap = classOpcodes.get(client.getState());
 		if (stateMap == null)
 			return null;
